@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using GwalhoCompiler;
@@ -18,75 +17,49 @@ class Program
         return Dispatch(args);
     }
 
-    // =====================================================
-    // 이름 붙은 파라미터 파싱 (-Source snake.gwl -Output ./build 형태)
-    // =====================================================
-    static Dictionary<string, string> ParseNamedArgs(string[] args, int startIndex)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        for (int i = startIndex; i < args.Length; i++)
-        {
-            if (!args[i].StartsWith("-")) continue;
-
-            string key = args[i].TrimStart('-');
-            string value = (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
-                ? args[++i]
-                : "true"; // 스위치형 파라미터(-Verbose 같은 것) 대비
-
-            result[key] = value;
-        }
-
-        return result;
-    }
-
     static int Dispatch(string[] args)
     {
         string cmd = args[0];
 
         return cmd switch
         {
-            "-h" or "-Help" or "--help" or "help" => Help(args),
-            "-v" or "-Version" or "--version" => Version(),
-            "build" or "Build-Gwalho" => Build(args),
-            "run" or "Invoke-Gwalho" => Run(args),
-            "new" or "New-Gwalho" => New(args),
-            "bench" => Bench(args),
-            _ => LegacyBuild(args)
+            "-h" or "--help" or "help" => Help(args),
+            "-v" or "--version"        => Version(),
+            "build"                    => Build(args),
+            "run"                      => Run(args),
+            "new"                      => New(args),
+            "bench"                    => Bench(args),
+            _                          => LegacyBuild(args)
         };
     }
 
     // =====================================================
-    // build : gwalho build -Source snake.gwl -Output ./build
+    // build : gwalho build snake.gwl [출력폴더]
     // =====================================================
     static int Build(string[] args)
     {
-        var p = ParseNamedArgs(args, 1);
-
-        if (!p.TryGetValue("Source", out string? source))
+        if (args.Length < 2)
         {
-            Console.Error.WriteLine("[!]( 사용법: gwalho build -Source <파일> [-Output <폴더>] )");
+            Console.Error.WriteLine("[!]( 사용법: gwalho build <소스파일> [출력폴더] )");
             return 1;
         }
 
-        p.TryGetValue("Output", out string? output);
-        return CompileToFolder(source, output);
+        return CompileToFolder(args[1], args.Length >= 3 ? args[2] : null);
     }
 
     // =====================================================
-    // run : gwalho run -Source snake.gwl -Fps 10
+    // run : gwalho run snake.gwl [fps]
     // =====================================================
     static int Run(string[] args)
     {
-        var p = ParseNamedArgs(args, 1);
-
-        if (!p.TryGetValue("Source", out string? sourcePath))
+        if (args.Length < 2)
         {
-            Console.Error.WriteLine("[!]( 사용법: gwalho run -Source <파일> [-Fps <숫자>] )");
+            Console.Error.WriteLine("[!]( 사용법: gwalho run <소스파일> [fps] )");
             return 1;
         }
 
-        int fps = p.TryGetValue("Fps", out string? fpsStr) && int.TryParse(fpsStr, out int f) ? f : 10;
+        string sourcePath = args[1];
+        int fps = args.Length >= 3 && int.TryParse(args[2], out int f) ? f : 10;
         int frameDelayMs = fps > 0 ? 1000 / fps : 0;
 
         if (!File.Exists(sourcePath))
@@ -143,17 +116,17 @@ class Program
     }
 
     // =====================================================
-    // new : gwalho new -Path snake.gwl
+    // new : gwalho new snake.gwl
     // =====================================================
     static int New(string[] args)
     {
-        var p = ParseNamedArgs(args, 1);
-
-        if (!p.TryGetValue("Path", out string? path))
+        if (args.Length < 2)
         {
-            Console.Error.WriteLine("[!]( 사용법: gwalho new -Path <파일경로> )");
+            Console.Error.WriteLine("[!]( 사용법: gwalho new <파일경로> )");
             return 1;
         }
+
+        string path = args[1];
 
         if (File.Exists(path))
         {
@@ -175,6 +148,66 @@ class Program
         """);
 
         Console.WriteLine($"[!]( 생성됨 → {path} )");
+        return 0;
+    }
+
+    // =====================================================
+    // bench : gwalho bench [스텝수]
+    // =====================================================
+    static int Bench(string[] args)
+    {
+        int steps = args.Length >= 2 && int.TryParse(args[1], out int n) ? n : 10_000_000;
+
+        string bench = """
+    [ARRAY](Boot){
+        [DONE]
+    }
+
+    [ARRAY](Main){
+        [DEFN](counter, 0)
+        [DEFN](one, 1)
+        [DEFN](limit, 100000000)
+        [LABL](loop)
+        [PLUS](counter, counter, one)
+        [LESS](cond, counter, limit)
+        [JUMP](jr, cond, loop)
+        [DONE]
+    }
+    """;
+
+        string projectDir = Path.Combine(Path.GetTempPath(), "gwalho_bench_" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            Compiler.Compile(bench, projectDir);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[!]( 벤치마크 소스 컴파일 오류: {ex.Message} )");
+            return 1;
+        }
+
+        if (!GWVM.Boot(projectDir))
+        {
+            Console.Error.WriteLine("[!]( VM 부트 실패 )");
+            return 1;
+        }
+
+        Console.WriteLine($"벤치마크 시작: {steps:N0} 스텝");
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        GWVM.Step(steps);
+        sw.Stop();
+
+        double seconds = sw.Elapsed.TotalSeconds;
+        double opsPerSec = steps / seconds;
+
+        Console.WriteLine($"소요 시간: {seconds:F3}초");
+        Console.WriteLine($"처리 속도: {opsPerSec:N0} instructions/sec");
+        Console.WriteLine(GWVM.EndRun
+            ? "루프가 스텝 수 안에 DONE에 도달함 (더 큰 스텝수로 재측정 권장)"
+            : "스텝 상한 도달, 계속 실행 중이었음 (측정 유효)");
+
         return 0;
     }
 
@@ -215,12 +248,12 @@ class Program
         Console.WriteLine("""
         ================================================================
 
-          gwalho build -Source <파일> [-Output <폴더>]
-          gwalho run   -Source <파일> [-Fps <숫자>]
-          gwalho new   -Path <파일경로>
-          gwalho bench [-Steps <숫자>] VM 처리 속도 벤치마크
+          gwalho build <소스파일> [출력폴더]
+          gwalho run   <소스파일> [fps]
+          gwalho new   <파일경로>
+          gwalho bench [스텝수]           VM 처리 속도 벤치마크
           gwalho -Version
-        
+
         ================================================================
         """);
         return 0;
@@ -264,62 +297,7 @@ class Program
             }
         }
     }
-    static int Bench(string[] args)
-    {
-        var p = ParseNamedArgs(args, 1);
-        int steps = p.TryGetValue("Steps", out string? s) && int.TryParse(s, out int n) ? n : 10_000_000;
 
-        // 벤치용 소스: 루프 돌면서 덧셈만 반복 (순수 명령어 처리 속도 측정)
-        string bench = """
-    [ARRAY](Boot){
-        [DONE]
-    }
-
-    [ARRAY](Main){
-        [DEFN](counter, 0)
-        [DEFN](one, 1)
-        [DEFN](limit, 100000000)
-        [LABL](loop)
-        [PLUS](counter, counter, one)
-        [LESS](cond, counter, limit)
-        [JUMP](jr, cond, loop)
-        [DONE]
-    }
-    """;
-
-        string projectDir = Path.Combine(Path.GetTempPath(), "gwalho_bench_" + Guid.NewGuid().ToString("N"));
-
-        try
-        {
-            Compiler.Compile(bench, projectDir);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"벤치마크 소스 컴파일 오류: {ex.Message}");
-            return 1;
-        }
-
-        if (!GWVM.Boot(projectDir))
-        {
-            Console.Error.WriteLine("VM 부트 실패");
-            return 1;
-        }
-
-        Console.WriteLine($"벤치마크 시작: {steps:N0} 스텝");
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        GWVM.Step(steps);
-        sw.Stop();
-
-        double seconds = sw.Elapsed.TotalSeconds;
-        double opsPerSec = steps / seconds;
-
-        Console.WriteLine($"소요 시간: {seconds:F3}초");
-        Console.WriteLine($"처리 속도: {opsPerSec:N0} instructions/sec");
-        Console.WriteLine(GWVM.EndRun ? "루프가 스텝 수 안에 DONE에 도달함 (더 큰 -Steps로 재측정 권장)" : "스텝 상한 도달, 계속 실행 중이었음 (측정 유효)");
-
-        return 0;
-    }
     static string[] SplitLine(string line)
     {
         var result = new System.Collections.Generic.List<string>();
@@ -345,6 +323,4 @@ class Program
         }
         return result.ToArray();
     }
-
-   
 }
