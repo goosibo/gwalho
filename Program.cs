@@ -51,7 +51,7 @@ class Program
             "build" or "Build-Gwalho" => Build(args),
             "run" or "Invoke-Gwalho" => Run(args),
             "new" or "New-Gwalho" => New(args),
-            "syntax" => Syntax(args),
+      
             _ => LegacyBuild(args)
         };
     }
@@ -65,7 +65,7 @@ class Program
 
         if (!p.TryGetValue("Source", out string? source))
         {
-            Console.Error.WriteLine("사용법: gwalho build -Source <파일> [-Output <폴더>]");
+            Console.Error.WriteLine("[!]( 사용법: gwalho build -Source <파일> [-Output <폴더>] )");
             return 1;
         }
 
@@ -82,7 +82,7 @@ class Program
 
         if (!p.TryGetValue("Source", out string? sourcePath))
         {
-            Console.Error.WriteLine("사용법: gwalho run -Source <파일> [-Fps <숫자>]");
+            Console.Error.WriteLine("[!]( 사용법: gwalho run -Source <파일> [-Fps <숫자>] )");
             return 1;
         }
 
@@ -91,7 +91,7 @@ class Program
 
         if (!File.Exists(sourcePath))
         {
-            Console.Error.WriteLine($"파일을 찾을 수 없습니다: {sourcePath}");
+            Console.Error.WriteLine($"[!]( 파일을 찾을 수 없습니다: {sourcePath} )");
             return 1;
         }
 
@@ -103,13 +103,13 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"컴파일 오류: {ex.Message}");
+            Console.Error.WriteLine($"[!]( 컴파일 오류: {ex.Message} )");
             return 1;
         }
 
         if (!GWVM.Boot(projectDir))
         {
-            Console.Error.WriteLine("VM 부트 실패 (Boot 배열 로드 불가)");
+            Console.Error.WriteLine("[!]( VM 부트 실패 (Boot 배열 로드 불가) )");
             return 1;
         }
 
@@ -127,7 +127,7 @@ class Program
 
             if (!GWVM.EndRun)
             {
-                Console.Error.WriteLine($"프레임 {frame}이 스텝 상한 안에 DONE에 도달하지 못함");
+                Console.Error.WriteLine($"[!]( 프레임 {frame}이 스텝 상한 안에 DONE에 도달하지 못함 )");
                 return 1;
             }
 
@@ -138,7 +138,7 @@ class Program
                 System.Threading.Thread.Sleep(remain);
         }
 
-        Console.WriteLine($"{frame}프레임 실행 후 종료");
+        Console.WriteLine($"[!]( {frame}프레임 실행 후 종료 )");
         return 0;
     }
 
@@ -151,13 +151,13 @@ class Program
 
         if (!p.TryGetValue("Path", out string? path))
         {
-            Console.Error.WriteLine("사용법: gwalho new -Path <파일경로>");
+            Console.Error.WriteLine("[!]( 사용법: gwalho new -Path <파일경로> )");
             return 1;
         }
 
         if (File.Exists(path))
         {
-            Console.Error.WriteLine($"이미 존재하는 파일입니다: {path}");
+            Console.Error.WriteLine($"[!]( 이미 존재하는 파일입니다: {path} )");
             return 1;
         }
 
@@ -174,7 +174,7 @@ class Program
         }
         """);
 
-        Console.WriteLine($"생성됨 → {path}");
+        Console.WriteLine($"[!]( 생성됨 → {path} )");
         return 0;
     }
 
@@ -184,7 +184,7 @@ class Program
     {
         if (!File.Exists(sourcePath))
         {
-            Console.Error.WriteLine($"파일을 찾을 수 없습니다: {sourcePath}");
+            Console.Error.WriteLine($"[!]( 파일을 찾을 수 없습니다: {sourcePath} )");
             return 1;
         }
 
@@ -193,12 +193,12 @@ class Program
         try
         {
             Compiler.Compile(File.ReadAllText(sourcePath), outputDir);
-            Console.WriteLine($"컴파일 완료 → {outputDir}");
+            Console.WriteLine($"[!]( 컴파일 완료 → {outputDir} )");
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"컴파일 오류: {ex.Message}");
+            Console.Error.WriteLine($"[!]( 컴파일 오류: {ex.Message} )");
             return 1;
         }
     }
@@ -206,28 +206,39 @@ class Program
     static int Version()
     {
         string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
-        Console.WriteLine($"gwalho {version}");
+        Console.WriteLine($"[!]( gwalho {version} )");
         return 0;
     }
 
     static int Help(string[] args)
     {
         Console.WriteLine("""
-        gwalho — Gwalho 언어 컴파일러/실행기 (PowerShell 파라미터 스타일)
+        ================================================================
 
-        사용법:
           gwalho build -Source <파일> [-Output <폴더>]
           gwalho run   -Source <파일> [-Fps <숫자>]
           gwalho new   -Path <파일경로>
-          gwalho syntax [주제]
           gwalho -Version
+        
+        ================================================================
         """);
         return 0;
     }
 
     static void RunShell()
     {
-        Console.WriteLine("gwalho 셸입니다. 'help'로 명령어 목록, 'exit'로 종료.");
+        Console.WriteLine("""
+
+            *****************************************************************
+            gwalho Shell.                
+            *****************************************************************
+                                                                               
+            'help'로 명령어 목록보기.                                          
+            'exit'로 종료하기.                                                 
+                                                                               
+            =================================================================
+
+            """);
 
         while (true)
         {
@@ -250,7 +261,7 @@ class Program
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"오류: {ex.Message}");
+                Console.Error.WriteLine($"[!] 오류: {ex.Message}");
             }
         }
     }
@@ -281,37 +292,5 @@ class Program
         return result.ToArray();
     }
 
-    static int Syntax(string[] args)
-    {
-        string topic = args.Length >= 2 ? args[1] : "";
-
-        Console.WriteLine(topic switch
-        {
-            "array" => """
-            [ARRAY](이름){
-                ...라인들...
-            }
-            이름만 받고, 로직/데이터 구분은 없음 — 내용에 명령어가 있으면 자동으로 로직처럼 동작.
-            """,
-            "literal" => """
-            [오프셋](값,값,...)<반복수>
-              오프셋 비우면 이어쓰기(직전 커서 다음). 반복수 생략 시 1.
-              예: [](1,2,3)  또는  [5](0,0)<3>
-            """,
-            "jump" => """
-            [JUMP](결과, 조건, 목적지라벨)
-              조건 레지스터가 0이 아니면 점프하고 결과에 1을 씀, 아니면 0.
-            """,
-            "op" => """
-            일반 명령어: [OPCODE](결과, 인자...)
-              연산자류는 결과가 맨 앞. 배열블록류는 ID·인덱스·길이 뒤에 값/결과.
-            """,
-            _ => """
-            주제 목록: array, literal, jump, op
-            'gwalho syntax <주제>'로 상세 설명을 볼 수 있습니다.
-            """
-        });
-
-        return 0;
-    }
+   
 }
