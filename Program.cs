@@ -51,7 +51,7 @@ class Program
             "build" or "Build-Gwalho" => Build(args),
             "run" or "Invoke-Gwalho" => Run(args),
             "new" or "New-Gwalho" => New(args),
-      
+            "bench" => Bench(args),
             _ => LegacyBuild(args)
         };
     }
@@ -218,6 +218,7 @@ class Program
           gwalho build -Source <파일> [-Output <폴더>]
           gwalho run   -Source <파일> [-Fps <숫자>]
           gwalho new   -Path <파일경로>
+          gwalho bench [-Steps <숫자>] VM 처리 속도 벤치마크
           gwalho -Version
         
         ================================================================
@@ -263,7 +264,62 @@ class Program
             }
         }
     }
+    static int Bench(string[] args)
+    {
+        var p = ParseNamedArgs(args, 1);
+        int steps = p.TryGetValue("Steps", out string? s) && int.TryParse(s, out int n) ? n : 10_000_000;
 
+        // 벤치용 소스: 루프 돌면서 덧셈만 반복 (순수 명령어 처리 속도 측정)
+        string bench = """
+    [ARRAY](Boot){
+        [DONE]
+    }
+
+    [ARRAY](Main){
+        [DEFN](counter, 0)
+        [DEFN](one, 1)
+        [DEFN](limit, 100000000)
+        [LABL](loop)
+        [PLUS](counter, counter, one)
+        [LESS](cond, counter, limit)
+        [JUMP](jr, cond, loop)
+        [DONE]
+    }
+    """;
+
+        string projectDir = Path.Combine(Path.GetTempPath(), "gwalho_bench_" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            Compiler.Compile(bench, projectDir);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"벤치마크 소스 컴파일 오류: {ex.Message}");
+            return 1;
+        }
+
+        if (!GWVM.Boot(projectDir))
+        {
+            Console.Error.WriteLine("VM 부트 실패");
+            return 1;
+        }
+
+        Console.WriteLine($"벤치마크 시작: {steps:N0} 스텝");
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        GWVM.Step(steps);
+        sw.Stop();
+
+        double seconds = sw.Elapsed.TotalSeconds;
+        double opsPerSec = steps / seconds;
+
+        Console.WriteLine($"소요 시간: {seconds:F3}초");
+        Console.WriteLine($"처리 속도: {opsPerSec:N0} instructions/sec");
+        Console.WriteLine(GWVM.EndRun ? "루프가 스텝 수 안에 DONE에 도달함 (더 큰 -Steps로 재측정 권장)" : "스텝 상한 도달, 계속 실행 중이었음 (측정 유효)");
+
+        return 0;
+    }
     static string[] SplitLine(string line)
     {
         var result = new System.Collections.Generic.List<string>();
