@@ -1,0 +1,14 @@
+C:\Users\USER\source\repos\gwalho\gwalho\bin\Debug\net8.0\gwalho.exe
+C:\Users\USER\source\repos\gwalho\gwalho\bin\Debug\net8.0\gwalho.deps.json
+C:\Users\USER\source\repos\gwalho\gwalho\bin\Debug\net8.0\gwalho.runtimeconfig.json
+C:\Users\USER\source\repos\gwalho\gwalho\bin\Debug\net8.0\gwalho.dll
+C:\Users\USER\source\repos\gwalho\gwalho\bin\Debug\net8.0\gwalho.pdb
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.AssemblyInfoInputs.cache
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.AssemblyInfo.cs
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.csproj.CoreCompileInputs.cache
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.dll
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\refint\gwalho.dll
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.pdb
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\gwalho.genruntimeconfig.cache
+C:\Users\USER\source\repos\gwalho\gwalho\obj\Debug\net8.0\ref\gwalho.dll
