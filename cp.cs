@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -508,7 +508,7 @@ namespace GwalhoCompiler
             main.ID = 1;
             project.ArrayBlockIDs["Main"] = 1;
 
-            int next = 1;
+            int next = 2;
 
             foreach (var ArrayBlock in project.ArrayBlocks)
             {
