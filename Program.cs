@@ -24,12 +24,12 @@ class Program
         return cmd switch
         {
             "-h" or "--help" or "help" => Help(args),
-            "-v" or "--version"        => Version(),
-            "build"                    => Build(args),
-            "run"                      => Run(args),
-            "new"                      => New(args),
-            "bench"                    => Bench(args),
-            _                          => LegacyBuild(args)
+            "-v" or "--version" => Version(),
+            "build" => Build(args),
+            "run" => Run(args),
+            "new" => New(args),
+            "bench" => Bench(args),
+            _ => LegacyBuild(args)
         };
     }
 
@@ -47,85 +47,83 @@ class Program
         return CompileToFolder(args[1], args.Length >= 3 ? args[2] : null);
     }
 
-   
-    
-// =====================================================
-// run : gwalho run <소스파일 또는 빌드폴더> [fps]
-// =====================================================
-static int Run(string[] args)
-{
-    if (args.Length < 2)
+    // =====================================================
+    // run : gwalho run <소스파일 또는 빌드폴더> [fps]
+    // =====================================================
+    static int Run(string[] args)
     {
-        Console.Error.WriteLine("[!]( 사용법: gwalho run <소스파일 또는 빌드폴더> [fps] )");
-        return 1;
-    }
-
-    string target = args[1];
-    int fps = args.Length >= 3 && int.TryParse(args[2], out int f) ? f : 10;
-    int frameDelayMs = fps > 0 ? 1000 / fps : 0;
-
-    string projectDir;
-
-    if (Directory.Exists(target))
-    {
-        // 이미 컴파일된 배열 파일들(0.gwl, 1.gwl ...)이 있는 폴더 — 컴파일 건너뛰고 바로 실행
-        projectDir = Path.GetFullPath(target);
-    }
-    else if (File.Exists(target))
-    {
-        // .gwl 소스 파일 — 임시 폴더에 컴파일 후 실행
-        projectDir = Path.Combine(Path.GetTempPath(), "gwalho_run_" + Guid.NewGuid().ToString("N"));
-
-        try
+        if (args.Length < 2)
         {
-            Compiler.Compile(File.ReadAllText(target), projectDir);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[!]( 컴파일 오류: {ex.Message} )");
-            return 1;
-        }
-    }
-    else
-    {
-        Console.Error.WriteLine($"[!]( 파일 또는 폴더를 찾을 수 없습니다: {target} )");
-        return 1;
-    }
-
-    if (!GWVM.Boot(projectDir))
-    {
-        Console.Error.WriteLine("[!]( VM 부트 실패 (Boot 배열 로드 불가) )");
-        return 1;
-    }
-
-    const int maxStepsPerFrame = 1_000_000;
-    int frame = 0;
-
-    while (true)
-    {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-
-        if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q)
-            break;
-
-        GWVM.Step(maxStepsPerFrame);
-
-        if (!GWVM.EndRun)
-        {
-            Console.Error.WriteLine($"[!]( 프레임 {frame}이 스텝 상한 안에 DONE에 도달하지 못함 )");
+            Console.Error.WriteLine("[!]( 사용법: gwalho run <소스파일 또는 빌드폴더> [fps] )");
             return 1;
         }
 
-        frame++;
+        string target = args[1];
+        int fps = args.Length >= 3 && int.TryParse(args[2], out int f) ? f : 10;
+        int frameDelayMs = fps > 0 ? 1000 / fps : 0;
 
-        int remain = frameDelayMs - (int)sw.ElapsedMilliseconds;
-        if (remain > 0)
-            System.Threading.Thread.Sleep(remain);
+        string projectDir;
+
+        if (Directory.Exists(target))
+        {
+            // 이미 컴파일된 배열 파일들(0.gwl, 1.gwl ...)이 있는 폴더 — 컴파일 건너뛰고 바로 실행
+            projectDir = Path.GetFullPath(target);
+        }
+        else if (File.Exists(target))
+        {
+            // .gwl 소스 파일 — 임시 폴더에 컴파일 후 실행
+            projectDir = Path.Combine(Path.GetTempPath(), "gwalho_run_" + Guid.NewGuid().ToString("N"));
+
+            try
+            {
+                Compiler.Compile(File.ReadAllText(target), projectDir);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[!]( 컴파일 오류: {ex.Message} )");
+                return 1;
+            }
+        }
+        else
+        {
+            Console.Error.WriteLine($"[!]( 파일 또는 폴더를 찾을 수 없습니다: {target} )");
+            return 1;
+        }
+
+        if (!GWVM.Boot(projectDir))
+        {
+            Console.Error.WriteLine("[!]( VM 부트 실패 (Boot 배열 로드 불가) )");
+            return 1;
+        }
+
+        const int maxStepsPerFrame = 1_000_000;
+        int frame = 0;
+
+        while (true)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q)
+                break;
+
+            GWVM.Step(maxStepsPerFrame);
+
+            if (!GWVM.EndRun)
+            {
+                Console.Error.WriteLine($"[!]( 프레임 {frame}이 스텝 상한 안에 DONE에 도달하지 못함 )");
+                return 1;
+            }
+
+            frame++;
+
+            int remain = frameDelayMs - (int)sw.ElapsedMilliseconds;
+            if (remain > 0)
+                System.Threading.Thread.Sleep(remain);
+        }
+
+        Console.WriteLine($"[!]( {frame}프레임 실행 후 종료 )");
+        return 0;
     }
-
-    Console.WriteLine($"[!]( {frame}프레임 실행 후 종료 )");
-    return 0;
-}
 
     // =====================================================
     // new : gwalho new snake.gwl
