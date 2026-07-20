@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -522,12 +522,14 @@ namespace Gwalho
 
                 if (State != VMState.Running) return;
 
-                if (EndRun)   // 직전 호출이 [DONE]으로 끝났으면 새 프레임 시작
+                if (EndRun)
                 {
                     FrameTop = 0;
                     CurrentArrayBlock = 1;
                     PC = 0;
                     EndRun = false;
+                    Frames[0] = default;      // 추가: 프레임0 레지스터도 초기화
+                    Frames[0].Self = 1;
                 }
 
                 FRAME* frame = frames + FrameTop;
