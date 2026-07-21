@@ -22,7 +22,7 @@ namespace GwalhoCompiler
         public byte Exists;
     }
 
-    
+    // ⚠️ VM(BXVM)의 OP enum과 "순서/값"이 완전히 동일해야 합니다.
     public enum OP : int
     {
         NOPE,
@@ -47,11 +47,11 @@ namespace GwalhoCompiler
         BFLR,
         BFLW,
 
-        SHLE,
-        ROLE,
-        SHRI,
-        RORI,
-        USHR,
+        BSHL,
+        BROL,
+        BSHR,
+        BROR,
+        BUSR,
         GRET,
         LESS,
         EQUL,
@@ -68,6 +68,8 @@ namespace GwalhoCompiler
         EXIT,
         COPY,
         ALOC,
+        DELT,
+        COMP,
         FREE,
         LOAD,
         SAVE,
@@ -85,7 +87,10 @@ namespace GwalhoCompiler
         BASE,
         SWAP,
         DONE,
-        RNDM,DELT,COMP,
+        RNDM,
+
+
+
 
         EXTRA = NOPE
     }
@@ -724,11 +729,11 @@ namespace GwalhoCompiler
             ["BFLR"] = new(OP.BFLR, R('A'), R('B'), R('C'), R2('A')),
             ["BFLW"] = new(OP.BFLW, R('A'), R('B'), R('C'), R2('A'), R2('B')),
 
-            ["BSHL"] = new(OP.SHLE, R('A'), R('B'), R('C')),
-            ["BROR"] = new(OP.RORI, R('A'), R('B'), R('C')),
-            ["BROL"] = new(OP.ROLE, R('A'), R('B'), R('C')),
-            ["BUSR"] = new(OP.USHR, R('A'), R('B'), R('C')),
-            ["BSHR"] = new(OP.SHRI, R('A'), R('B'), R('C')),
+            ["BSHL"] = new(OP.BSHL, R('A'), R('B'), R('C')),
+            ["BROR"] = new(OP.BROR, R('A'), R('B'), R('C')),
+            ["BROL"] = new(OP.BROL, R('A'), R('B'), R('C')),
+            ["BUSR"] = new(OP.BUSR, R('A'), R('B'), R('C')),
+            ["BSHR"] = new(OP.BSHR, R('A'), R('B'), R('C')),
 
             ["JUMP"] = new(OP.JUMP, R('A'), R('B'), L('C')),
             ["LABL"] = new(OP.NOPE),
@@ -751,6 +756,8 @@ namespace GwalhoCompiler
 
             ["RESZ"] = new(OP.RESZ, R('A'), R('B'), R('C')),
             ["SWAP"] = new(OP.SWAP, R('A'), R('B'), R('C'), R2('A'), R2('B')),
+            ["COMP"] = new(OP.COMP, R('A')),
+            ["DELE"] = new(OP.DELT, R('A'), R('B')),
 
             ["LNTH"] = new(OP.LNTH, R('A'), R('B')),
             ["EXST"] = new(OP.EXST, R('A'), R('B')),
@@ -767,8 +774,6 @@ namespace GwalhoCompiler
             ["FIND"] = new(OP.FIND, R('A'), R('B'), R('C'), R2('A'), R2('B')),
             ["SORT"] = new(OP.SORT, R('A'), R('B'), R('C'), R2('A'), R2('B')),
             ["RNDM"] = new(OP.RNDM, R('A'), R('B'), R('C')),
-["COMP"] = new(OP.COMP, R('A')),
-["DELE"] = new(OP.DELE, R('A'), R('B')),
         };
 
         // =====================================================
