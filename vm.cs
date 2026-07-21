@@ -32,11 +32,11 @@ namespace Gwalho
         BFLR,
         BFLW,
 
-        SHLE,
-        ROLE,
-        SHRI,
-        RORI,
-        USHR,
+        BSHL,
+        BROL,
+        BSHR,
+        BROR,
+        BUSR,
         GRET,
         LESS,
         EQUL,
@@ -53,6 +53,8 @@ namespace Gwalho
         EXIT,
         COPY,
         ALOC,
+        DELT,
+        COMP,
         FREE,
         LOAD,
         SAVE,
@@ -71,7 +73,6 @@ namespace Gwalho
         SWAP,
         DONE,
         RNDM,
-DELT, COMP,
 
 
 
@@ -167,11 +168,11 @@ DELT, COMP,
             Ops[(int)OP.BFLW] = &BFLW;
 
 
-            Ops[(int)OP.SHLE] = &SHLE;
-            Ops[(int)OP.ROLE] = &ROLE;
-            Ops[(int)OP.RORI] = &RORI;
-            Ops[(int)OP.SHRI] = &SHRI;
-            Ops[(int)OP.USHR] = &USHR;
+            Ops[(int)OP.BSHL] = &BSHL;
+            Ops[(int)OP.BROL] = &BROL;
+            Ops[(int)OP.BROR] = &BROR;
+            Ops[(int)OP.BSHR] = &BSHR;
+            Ops[(int)OP.BUSR] = &BUSR;
 
             Ops[(int)OP.GRET] = &GRET;
             Ops[(int)OP.LESS] = &LESS;
@@ -192,6 +193,8 @@ DELT, COMP,
 
             Ops[(int)OP.COPY] = &COPY;
             Ops[(int)OP.ALOC] = &ALOC;
+            Ops[(int)OP.COMP] = &COMP;
+            Ops[(int)OP.DELT] = &DELT;
             Ops[(int)OP.FREE] = &FREE;
             Ops[(int)OP.LOAD] = &LOAD;
             Ops[(int)OP.SAVE] = &SAVE;
@@ -214,9 +217,6 @@ DELT, COMP,
             Ops[(int)OP.EXST] = &EXST;
 
             Ops[(int)OP.BASE] = &BASE;
-            
-            Ops[(int)OP.COMP] = &COMP;
-            Ops[(int)OP.DELT] = &DELT;
 
             Ops[(int)OP.RNDM] = &RNDM;
             Ops[(int)OP.DONE] = &DONE;
@@ -267,7 +267,20 @@ DELT, COMP,
 
             return true;
         }
+        public static bool DeleteArrayBlock(int id)
+        {
+            if (!IsValidID(id)) return false;
+            if (Metadatas[id].Exists == 0) return false;
+            if (id == CurrentArrayBlock) return false;
 
+            for (int i = 0; i <= FrameTop; i++)
+                if (Frames[i].Self == id) return false;
+
+            Metadatas[id] = default;   // 슬롯 완전 초기화 (Length도 0으로) — ALOC이 재사용 가능하게
+            RemoveUsedID(id);
+
+            return true;
+        }
         static void RemoveUsedID(int id)
         {
             int* used = (int*)Unsafe.AsPointer(ref used_ID[0]);
@@ -283,48 +296,42 @@ DELT, COMP,
         } // 사용중인 아이디에서 제거합니다.
 
         // ================== Alloc ==================
-      public static int AllocateArrayBlock(int length)
-{
-    for (int i = 1; i < MAX_ArrayBlock; i++)   // 0은 Boot 전용, 제외
-    {
-        if (Metadatas[i].Exists == 0 && Metadatas[i].Length == 0)  // 완전히 빈 슬롯만
+        public static int AllocateArrayBlock(int length)
         {
-            METADATA meta = new METADATA { Magic = METADATA.MAGIC, ID = i, Length = length, Base = 0, Exists = 0 };
-            return RegisterBlock(meta) ? i : 0;
-        }
-    }
-    return 0;
-}
+            for (int i = 1; i < MAX_ArrayBlock; i++)   // 0은 Boot 전용 제외
+            {
+                if (Metadatas[i].Exists == 0 && Metadatas[i].Length == 0)
+                {
+                    METADATA meta = new METADATA
+                    {
+                        Magic = METADATA.MAGIC,
+                        ID = i,
+                        Length = length,
+                        Base = 0,
+                        Exists = 0,
+                    };
+                    return RegisterBlock(meta) ? i : 0;
+                }
+            }
+            return 0;
+        }// 빈 슬롯을 찾아 새 배열을 등록합니다. 실패하면 0을 반환합니다.
 
         // ================== Free ==================
-              // FREE: 메모리에서만 내림. 슬롯은 "디스크에 있는 걸 다시 부를 수 있는 상태"로 남김
-public static bool FreeArrayBlock(int id)
-{
-    if (!IsValidID(id)) return false;
-    if (Metadatas[id].Exists == 0) return false;
-    if (id == CurrentArrayBlock) return false;
-    for (int i = 0; i <= FrameTop; i++)
-        if (Frames[i].Self == id) return false;
+        public static bool FreeArrayBlock(int id)
+        {
+            if (!IsValidID(id)) return false;
+            if (Metadatas[id].Exists == 0) return false;
+            if (id == CurrentArrayBlock) return false;
 
-    Metadatas[id].Exists = 0;
-    RemoveUsedID(id);
-    // Length/ID 등은 그대로 남겨둠 — "이 슬롯은 디스크 배열 id일 수 있다"는 흔적 유지
-    return true;
-}
+            for (int i = 0; i <= FrameTop; i++)
+                if (Frames[i].Self == id) return false;
 
-// DELETE: ALOC으로 만든 배열 전용. 슬롯 자체를 완전히 비워서 재사용 가능하게 만듦
-public static bool DeleteArrayBlock(int id)
-{
-    if (!IsValidID(id)) return false;
-    if (Metadatas[id].Exists == 0) return false;
-    if (id == CurrentArrayBlock) return false;
-    for (int i = 0; i <= FrameTop; i++)
-        if (Frames[i].Self == id) return false;
+            Metadatas[id].Exists = 0;
+            RemoveUsedID(id);
+            // Length/ID는 그대로 남김 — LOAD로 다시 불러올 수 있는 여지 유지
 
-    Metadatas[id] = default;   // 완전 초기화 — Length도 0으로, 슬롯을 진짜 '빈 것'으로
-    RemoveUsedID(id);
-    return true;
-}
+            return true;
+        } // 배열을 메모리에서 지웁니다.
 
         // ================== Save ==================
         public static bool SaveArrayBlock(int id)
@@ -772,7 +779,7 @@ public static bool DeleteArrayBlock(int id)
 
             //($"BFLW : R[{ip[1]}]({reg[ip[1]]}) = (R[{ip[2]}]({reg[ip[1]]})[(R[{ip[3]}]({reg[ip[1]]})+...+R[{ip[5]}])({reg[ip[1]]})] = R[{ip[6]}]({reg[ip[1]]}))");
         }
-        static void SHLE(int* ip, FRAME* frame)
+        static void BSHL(int* ip, FRAME* frame)
         {
             int* reg = frame->Registers;
 
@@ -782,7 +789,7 @@ public static bool DeleteArrayBlock(int id)
 
             //($" Shift(L) : R[{ip[1]}]({reg[ip[1]]}) = R[{ip[2]}]({reg[ip[1]]}) << R[{ip[3]}]({reg[ip[1]]})");
         }
-        static void ROLE(int* ip, FRAME* frame)
+        static void BROL(int* ip, FRAME* frame)
         {
             int* reg = frame->Registers;
             int value = reg[ip[2]];
@@ -791,7 +798,7 @@ public static bool DeleteArrayBlock(int id)
 
             //($" Rotate(L) : R[{ip[1]}]({reg[ip[1]]}) = R[{ip[2]}]({reg[ip[1]]}) <@ R[{ip[3]}]({reg[ip[1]]})");
         }
-        static void RORI(int* ip, FRAME* frame)
+        static void BROR(int* ip, FRAME* frame)
         {
             int* reg = frame->Registers;
             int value = reg[ip[2]];
@@ -801,7 +808,7 @@ public static bool DeleteArrayBlock(int id)
 
             //($" Rotate(R) : R[{ip[1]}]({reg[ip[1]]}) = R[{ip[2]}]({reg[ip[1]]}) @> R[{ip[3]}]({reg[ip[1]]})");
         }
-        static void SHRI(int* ip, FRAME* frame)
+        static void BSHR(int* ip, FRAME* frame)
         {
             int* reg = frame->Registers;
 
@@ -812,7 +819,7 @@ public static bool DeleteArrayBlock(int id)
             //($" Shift(R) : R[{ip[1]}]({reg[ip[1]]}) = R[{ip[2]}]({reg[ip[1]]}) >> R[{ip[3]}]({reg[ip[1]]})");
 
         }
-        static void USHR(int* ip, FRAME* frame)
+        static void BUSR(int* ip, FRAME* frame)
         {
             int* reg = frame->Registers;
 
@@ -1407,6 +1414,20 @@ public static bool DeleteArrayBlock(int id)
             reg[ip[1]] = Metadatas[id].Length;
 
         }
+
+        // OP enum에 COMP 추가 (DONE 앞이나 뒤에)
+        static void COMP(int* ip, FRAME* frame)
+        {
+            Compact();
+            frame->Registers[ip[1]] = 1;   // 결과: 항상 성공
+        }
+
+        static void DELT(int* ip, FRAME* frame)
+        {
+            int* reg = frame->Registers;
+            bool ok = DeleteArrayBlock(reg[ip[2]]);
+            reg[ip[1]] = ok ? 1 : 0;
+        }
         static void EXST(int* ip, FRAME* frame)
         {
             int* reg =
@@ -1638,17 +1659,6 @@ public static bool DeleteArrayBlock(int id)
             reg[ip[1]] =
                 min;
         }
-static void DELT(int* ip, FRAME* frame)
-{
-    int* reg = frame->Registers;
-    bool ok = DeleteArrayBlock(reg[ip[2]]);
-    reg[ip[1]] = ok ? 1 : 0;
-}
-static void COMP(int* ip, FRAME* frame)
-{
-    Compact();
-    frame->Registers[ip[1]] = 1;   // 결과: 항상 성공
-}
         static void MAXM(int* ip, FRAME* frame)
         {
             int* reg =
