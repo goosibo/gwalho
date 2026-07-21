@@ -756,7 +756,7 @@ namespace GwalhoCompiler
             ["RESZ"] = new(OP.RESZ, R('A'), R('B'), R('C')),
             ["SWAP"] = new(OP.SWAP, R('A'), R('B'), R('C'), R2('A'), R2('B')),
             ["COMP"] = new(OP.COMP, R('A')),
-            ["DELE"] = new(OP.DELT, R('A'), R('B')),
+            ["DELT"] = new(OP.DELT, R('A'), R('B')),
 
             ["LNTH"] = new(OP.LNTH, R('A'), R('B')),
             ["EXST"] = new(OP.EXST, R('A'), R('B')),
