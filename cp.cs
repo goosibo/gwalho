@@ -85,7 +85,7 @@ namespace GwalhoCompiler
         BASE,
         SWAP,
         DONE,
-        RNDM,
+        RNDM,DELT,COMP,
 
         EXTRA = NOPE
     }
@@ -767,6 +767,8 @@ namespace GwalhoCompiler
             ["FIND"] = new(OP.FIND, R('A'), R('B'), R('C'), R2('A'), R2('B')),
             ["SORT"] = new(OP.SORT, R('A'), R('B'), R('C'), R2('A'), R2('B')),
             ["RNDM"] = new(OP.RNDM, R('A'), R('B'), R('C')),
+["COMP"] = new(OP.COMP, R('A')),
+["DELE"] = new(OP.DELE, R('A'), R('B')),
         };
 
         // =====================================================
