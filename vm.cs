@@ -71,6 +71,7 @@ namespace Gwalho
         SWAP,
         DONE,
         RNDM,
+DELT, COMP,
 
 
 
@@ -213,6 +214,9 @@ namespace Gwalho
             Ops[(int)OP.EXST] = &EXST;
 
             Ops[(int)OP.BASE] = &BASE;
+            
+            Ops[(int)OP.COMP] = &COMP;
+            Ops[(int)OP.DELT] = &DELT;
 
             Ops[(int)OP.RNDM] = &RNDM;
             Ops[(int)OP.DONE] = &DONE;
@@ -279,51 +283,48 @@ namespace Gwalho
         } // 사용중인 아이디에서 제거합니다.
 
         // ================== Alloc ==================
-        public static int AllocateArrayBlock(int length)
+      public static int AllocateArrayBlock(int length)
+{
+    for (int i = 1; i < MAX_ArrayBlock; i++)   // 0은 Boot 전용, 제외
+    {
+        if (Metadatas[i].Exists == 0 && Metadatas[i].Length == 0)  // 완전히 빈 슬롯만
         {
-            for (int i = 0; i < MAX_ArrayBlock; i++)
-            {
-                if (Metadatas[i].Exists == 0)
-                {
-                    METADATA meta = new METADATA
-                    {
-                        Magic = METADATA.MAGIC,
-                        ID = i,
-                        Length = length,
-                        Base = 0,
-                        Exists = 0,
-                    };
-
-                    return RegisterBlock(meta) ? i : 0;
-                }
-            }
-
-            return 0;
-        } // 빈 슬롯을 찾아 새 배열을 등록합니다. 실패하면 0을 반환합니다.
+            METADATA meta = new METADATA { Magic = METADATA.MAGIC, ID = i, Length = length, Base = 0, Exists = 0 };
+            return RegisterBlock(meta) ? i : 0;
+        }
+    }
+    return 0;
+}
 
         // ================== Free ==================
-        public static bool FreeArrayBlock(int id)
-        {
+              // FREE: 메모리에서만 내림. 슬롯은 "디스크에 있는 걸 다시 부를 수 있는 상태"로 남김
+public static bool FreeArrayBlock(int id)
+{
+    if (!IsValidID(id)) return false;
+    if (Metadatas[id].Exists == 0) return false;
+    if (id == CurrentArrayBlock) return false;
+    for (int i = 0; i <= FrameTop; i++)
+        if (Frames[i].Self == id) return false;
 
-            if (!IsValidID(id))
-                return false;
+    Metadatas[id].Exists = 0;
+    RemoveUsedID(id);
+    // Length/ID 등은 그대로 남겨둠 — "이 슬롯은 디스크 배열 id일 수 있다"는 흔적 유지
+    return true;
+}
 
-            if (Metadatas[id].Exists == 0)
-                return false;
+// DELETE: ALOC으로 만든 배열 전용. 슬롯 자체를 완전히 비워서 재사용 가능하게 만듦
+public static bool DeleteArrayBlock(int id)
+{
+    if (!IsValidID(id)) return false;
+    if (Metadatas[id].Exists == 0) return false;
+    if (id == CurrentArrayBlock) return false;
+    for (int i = 0; i <= FrameTop; i++)
+        if (Frames[i].Self == id) return false;
 
-
-            if (id == CurrentArrayBlock)
-                return false;
-
-            for (int i = 0; i <= FrameTop; i++)
-                if (Frames[i].Self == id)
-                    return false;
-
-            Metadatas[id].Exists = 0;
-            RemoveUsedID(id);
-
-            return true;
-        } // 배열을 메모리에서 지웁니다.
+    Metadatas[id] = default;   // 완전 초기화 — Length도 0으로, 슬롯을 진짜 '빈 것'으로
+    RemoveUsedID(id);
+    return true;
+}
 
         // ================== Save ==================
         public static bool SaveArrayBlock(int id)
@@ -1637,6 +1638,17 @@ namespace Gwalho
             reg[ip[1]] =
                 min;
         }
+static void DELT(int* ip, FRAME* frame)
+{
+    int* reg = frame->Registers;
+    bool ok = DeleteArrayBlock(reg[ip[2]]);
+    reg[ip[1]] = ok ? 1 : 0;
+}
+static void COMP(int* ip, FRAME* frame)
+{
+    Compact();
+    frame->Registers[ip[1]] = 1;   // 결과: 항상 성공
+}
         static void MAXM(int* ip, FRAME* frame)
         {
             int* reg =
