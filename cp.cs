@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-// 이름을 몇번이나 바꾸는 걸까
+using System.Text; 
 namespace GwalhoCompiler
 {
     // =====================================================
@@ -22,7 +21,7 @@ namespace GwalhoCompiler
         public byte Exists;
     }
 
-    // ⚠️ VM(BXVM)의 OP enum과 "순서/값"이 완전히 동일해야 합니다.
+   
     public enum OP : int
     {
         NOPE,
