@@ -22,7 +22,7 @@ namespace GwalhoCompiler
         public byte Exists;
     }
 
-    // ⚠️ VM(BXVM)의 OP enum과 "순서/값"이 완전히 동일해야 합니다.
+    
     public enum OP : int
     {
         NOPE,
